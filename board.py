@@ -11,17 +11,16 @@ class Board:
         self.net = net
         self.board = np.zeros((height, width), dtype=int)
         self.score = 0
-        self.lines = 0
-        self.level = 1
+        self.piece_level = 0
         self.piece = TPiece()
         self.game_over = False
+        self.rigid_std = 0
         self.next_piece = random.choice(
             [TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece]
         )()
         self.new_piece()
 
     def new_piece(self):
-        print("new piece!")
         self.piece = self.next_piece
         self.next_piece = random.choice(
             [TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece]
@@ -39,13 +38,39 @@ class Board:
         self.board = np.delete(self.board, lines, axis=0)
         for _ in lines:
             self.board = np.insert(self.board, 0, 0, axis=0)
-        self.score += len(lines)
-        self.lines += len(lines)
-        self.level = self.lines // 10 + 1
+        lin = len(lines)
+        self.score += 10 * (lin**2 - 10 + 1)
+
+    def get_score(self):
+        return self.score
+
+    def set_piece_height(self):
+        mask = np.any(self.board, axis=1)
+        old = self.piece_level
+        self.piece_level = 20 - np.where(mask)[0].min()
+        print(self.piece_level)
+        rigid_diff = self.set_rigid_std()
+        self.score += (old - self.piece_level) * 10 + rigid_diff * 10
+        # detect hole
+        if self.piece.check_collision(
+            self.board,
+            0,
+        ):
+            self.score -= 10
+            print("hole")
+        else:
+            self.score += 3
+
+    def set_rigid_std(self):
+
+        old = self.rigid_std
+        self.rigid_std = np.std(np.sum(self.board, axis=0))
+        return old - np.std(np.sum(self.board, axis=0))
 
     def check_game_over(self):
-        if np.any(self.board[0]):
-            self.game_over = True
+        if self.piece_level >= 19:
+            return True
+        return False
 
     def clear_active(self):
         for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
@@ -66,8 +91,21 @@ class Board:
             self.clear_active()
 
             if action == "w":
-                self.piece.rotate()
+                # had rotation errors going to other side of screen, so I added this
+                if self.piece.check_side(self.board, -1):
+                    self.piece.set_y(self.piece.get_y() + 2)
+                    self.piece.rotate()
+                    while not self.piece.check_side(self.board, -1):
+                        self.piece.set_y(self.piece.get_y() - 1)
 
+                elif self.piece.check_side(self.board, 1):
+                    self.piece.set_y(self.piece.get_y() - 2)
+                    self.piece.rotate()
+                    while not self.piece.check_side(self.board, 1):
+                        self.piece.set_y(self.piece.get_y() + 1)
+
+                else:
+                    self.piece.rotate()
             elif action == "a":
                 if not self.piece.check_side(self.board, -1):
                     self.piece.set_y(self.piece.get_y() - 1)
@@ -84,10 +122,13 @@ class Board:
             if self.piece.check_collision(self.board):
                 self.put_active()
                 self.check_clear_lines()
+                self.set_piece_height()
                 del self.piece
                 self.new_piece()
-                return
+
             else:
                 self.put_active()
-        if self.game_over:
-            return
+
+        if self.check_game_over():
+            return False
+        return True

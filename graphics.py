@@ -7,6 +7,8 @@ import time
 class Graphics:
     def __init__(self):
         self.screen = pygame.display.set_mode((500, 1000))
+        self.clock = pygame.time.Clock()
+        pygame.display.set_caption("Tetris")
 
     def draw_grid(self):
         for x in range(10):
@@ -28,17 +30,15 @@ class Graphics:
                     (255, 255, 255),
                     (x * 50, y * 50, 50, 50),
                 )
+        pygame.display.update()
 
+    # for playing game manually
     def run(self, board):
-        FPS = 30
 
-        clock = pygame.time.Clock()
-        pygame.display.set_caption("Tetris")
-        self.screen = pygame.display.set_mode((500, 1000))
         t = time.time()
-        while True:
-            self.draw_board(board)
-            pygame.display.update()
+        run = True
+        while run:
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -55,9 +55,12 @@ class Graphics:
 
             # board.update("s")
             if time.time() - t > 0.5:
-                board.update("s")
+                if not board.update("s"):
+                    run = False
+                    break
                 t = time.time()
-            clock.tick(FPS)
+            self.draw_board(board)
+            self.clock.tick(30)
 
 
 if __name__ == "__main__":

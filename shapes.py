@@ -36,14 +36,23 @@ class Shape:
     def set_y(self, y):
         self.y = y
 
-    def check_collision(self, board):
+    def check_collision(self, board, value=1):
         # using ndenumerate
+
         for (x, y), element in np.ndenumerate(self.blocks):
             board_x = self.x + x + 1
             board_y = self.y + y
 
-            if element and (board_x >= 20 or board[board_x, board_y] != 0):
-                return True
+            if element:
+                if value == 1 and (board_x >= 20 or board[board_x, board_y] == value):
+                    return True
+
+                try:
+                    if value == 0 and board[board_x, board_y] == value:
+                        return True
+                except IndexError:
+                    pass
+
         return False
 
     def check_side(
@@ -54,13 +63,15 @@ class Shape:
 
         for (x, y), element in np.ndenumerate(self.blocks):
             board_x = self.x + x
-            board_y = self.y + y + 1
-
-            if element and (
-                self.y + y + direction < 0
-                or self.y + y + direction >= 10
-                or board[board_x, board_y] != 0
-            ):
+            board_y = self.y + y
+            try:
+                if element and (
+                    self.y + y + direction < 0
+                    or self.y + y + direction >= 10
+                    or board[board_x, board_y] != 0
+                ):
+                    return True
+            except IndexError:
                 return True
         return False
 

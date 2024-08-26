@@ -1,4 +1,5 @@
 import neat
+import graphics
 
 # import tetris
 import os
@@ -19,10 +20,15 @@ def eval_genomes(genomes, config):
             board.piece.y,
             board.piece.id,
             board.piece.rotation,
+            board.rigid_std,
+            board.piece_level,
             board.get_board().flatten(),
         )
         key = ["w", " ", "s", "d"][output.index(max(output))]
-        board.update(key)
+        if not board.update(key):
+            board_list.remove(board)
+    render = graphics.Graphics()
+    render.draw_board(board_list[0])
 
 
 if __name__ == "__main__":
