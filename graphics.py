@@ -48,6 +48,8 @@ class Graphics:
                         board.update("a")
                     if event.key == pygame.K_d:
                         board.update("d")
+                    if event.key == pygame.K_s:
+                        board.update("s")
                     if event.key == pygame.K_w:
                         board.update("w")
                     if event.key == pygame.K_SPACE:

@@ -44,10 +44,12 @@ class Shape:
             board_y = self.y + y
 
             if element:
-                if value == 1 and (board_x >= 20 or board[board_x, board_y] == value):
-                    return True
-
                 try:
+                    if value == 1 and (
+                        board_x >= 20 or board[board_x, board_y] == value
+                    ):
+                        return True
+
                     if value == 0 and board[board_x, board_y] == value:
                         return True
                 except IndexError:

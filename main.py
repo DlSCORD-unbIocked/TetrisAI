@@ -13,22 +13,29 @@ def eval_genomes(genomes, config):
         genome.fitness = 0
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         board_list.append(Board(10, 20, genome, net))
-    print(len(board_list))
-    for board in board_list:
-        output = board.net.activate(
-            board.piece.x,
-            board.piece.y,
-            board.piece.id,
-            board.piece.rotation,
-            board.rigid_std,
-            board.piece_level,
-            board.get_board().flatten(),
-        )
-        key = ["w", " ", "s", "d"][output.index(max(output))]
-        if not board.update(key):
-            board_list.remove(board)
     render = graphics.Graphics()
-    render.draw_board(board_list[0])
+    while len(board_list) > 0:
+        for board in board_list:
+
+            output = board.net.activate(
+                [
+                    board.piece.x,
+                    board.piece.y,
+                    board.piece.id,
+                    board.piece.rotation,
+                    board.rigid_std,
+                    board.piece_level,
+                ]
+                + board.get_board().flatten().tolist(),
+            )
+            key = ["w", " ", "a", "d"][output.index(max(output))]
+            print(key)
+
+            if not board.update("s") and not board.update(key):
+                board_list.remove(board)
+        if len(board_list) == 0:
+            break
+        render.draw_board(board_list[0])
 
 
 if __name__ == "__main__":
@@ -45,6 +52,6 @@ if __name__ == "__main__":
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    winner = p.run(eval_genomes, 50)
+    winner = p.run(eval_genomes, 30)
 
     print("\nBest genome:\n{!s}".format(winner))

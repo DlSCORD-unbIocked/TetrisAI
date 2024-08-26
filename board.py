@@ -10,9 +10,9 @@ class Board:
         self.genome = genome
         self.net = net
         self.board = np.zeros((height, width), dtype=int)
-        self.score = 0
         self.piece_level = 0
         self.piece = TPiece()
+        self.score = 0
         self.game_over = False
         self.rigid_std = 0
         self.next_piece = random.choice(
@@ -48,7 +48,6 @@ class Board:
         mask = np.any(self.board, axis=1)
         old = self.piece_level
         self.piece_level = 20 - np.where(mask)[0].min()
-        print(self.piece_level)
         rigid_diff = self.set_rigid_std()
         self.score += (old - self.piece_level) * 10 + rigid_diff * 10
         # detect hole
@@ -57,7 +56,6 @@ class Board:
             0,
         ):
             self.score -= 10
-            print("hole")
         else:
             self.score += 3
 
@@ -69,6 +67,7 @@ class Board:
 
     def check_game_over(self):
         if self.piece_level >= 19:
+            self.score -= 30
             return True
         return False
 
@@ -110,7 +109,8 @@ class Board:
                 if not self.piece.check_side(self.board, -1):
                     self.piece.set_y(self.piece.get_y() - 1)
             elif action == "s":
-                self.piece.set_x(self.piece.get_x() + 1)
+                if not self.piece.check_collision(self.board):
+                    self.piece.set_x(self.piece.get_x() + 1)
             elif action == "d":
                 if not self.piece.check_side(self.board, 1):
                     self.piece.set_y(self.piece.get_y() + 1)
@@ -128,7 +128,8 @@ class Board:
 
             else:
                 self.put_active()
-
+        # when running AI
+        self.genome.fitness = self.score
         if self.check_game_over():
             return False
         return True
