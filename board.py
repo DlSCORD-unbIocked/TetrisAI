@@ -16,10 +16,10 @@ class Board:
         self.new_piece()
 
     def new_piece(self):
+        print("new piece!")
         self.piece = random.choice(
             [TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece]
         )()
-        self.piece.set_x(self.width // 2 - len(self.piece.get_blocks()[0]) // 2)
 
     def check_clear_lines(self):
         filled_rows = np.all(self.board, axis=1)
@@ -40,17 +40,34 @@ class Board:
 
     def update(self, action=None):
         if action:
+
+            for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
+                if element:
+                    self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 0
+
             if action == "w":
                 self.piece.rotate()
             elif action == "a":
-                self.piece.set_x(self.piece.get_x() - 1)
-            elif action == "d":
-                self.piece.set_y(self.piece.get_y() + 1)
+                self.piece.set_y(self.piece.get_y() - 1)
             elif action == "s":
                 self.piece.set_x(self.piece.get_x() + 1)
+            elif action == "d":
+                self.piece.set_y(self.piece.get_y() + 1)
             elif action == " ":
                 while not self.piece.check_collision():
-                    self.piece.set_x(self.piece.get_x() + 1)
+                    self.piece.set_y(self.piece.get_y() + 1)
+
+            if self.piece.check_collision(self.board):
+                for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
+                    if element:
+                        self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 1
+                self.check_clear_lines()
+                del self.piece
+                self.new_piece()
+                return
+            else:
+                for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
+                    if element:
+                        self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 1
         if self.game_over:
             return
-        self.check_clear_lines()
