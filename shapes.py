@@ -8,9 +8,15 @@ class Shape:
         self.color = (255, 255, 255)
         self.x = 0
         self.y = 3
+        self.id = 0
+        self.rotation = 0
 
     def rotate(self):
         self.blocks = np.rot90(self.blocks, k=-1)
+        if self.rotation == 3:
+            self.rotation = 0
+        else:
+            self.rotation += 1
 
     def get_blocks(self):
         return self.blocks
@@ -40,6 +46,24 @@ class Shape:
                 return True
         return False
 
+    def check_side(
+        self,
+        board,
+        direction=1,
+    ):
+
+        for (x, y), element in np.ndenumerate(self.blocks):
+            board_x = self.x + x
+            board_y = self.y + y + 1
+
+            if element and (
+                self.y + y + direction < 0
+                or self.y + y + direction >= 10
+                or board[board_x, board_y] != 0
+            ):
+                return True
+        return False
+
 
 # fmt: off
 
@@ -48,6 +72,7 @@ class TPiece(Shape):
     def __init__(self):
         Shape.__init__(self)
         self.color = (0, 255, 255)
+        self.id = 1
         self.blocks = np.array([
             [0, 1, 0],
             [1, 1, 1],
@@ -59,6 +84,7 @@ class SquarePiece(Shape):
     def __init__(self):
         Shape.__init__(self)
         self.y = 3
+        self.id = 2
         self.color = (255, 255, 0)
         self.blocks = np.array([
             [1, 1],
@@ -73,10 +99,9 @@ class LinePiece(Shape):
     def __init__(self):
         Shape.__init__(self)
         self.color = (0, 255, 0)
+        self.id = 3
         self.blocks = np.array([
-            [0, 0, 0, 0],
             [1, 1, 1, 1],
-            [0, 0, 0, 0],
             [0, 0, 0, 0],
         ])
 
@@ -85,6 +110,7 @@ class LeftLPiece(Shape):
     def __init__(self):
         Shape.__init__(self)
         self.color = (0, 0, 255)
+        self.id = 4
         self.blocks = np.array([
             [1, 0, 0],
             [1, 1, 1],
@@ -96,6 +122,7 @@ class RightLPiece(Shape):
     def __init__(self):
         Shape.__init__(self)
         self.color = (255, 0, 0)
+        self.id = 5
         self.blocks = np.array([
             [0, 0, 1],
             [1, 1, 1],
@@ -107,6 +134,7 @@ class LeftZPiece(Shape):
     def __init__(self):
         Shape.__init__(self)
         self.color = (0, 255, 0)
+        self.id = 6
         self.blocks = np.array([
             [1, 1, 0],
             [0, 1, 1],
@@ -118,6 +146,7 @@ class RightZPiece(Shape):
     def __init__(self):
         Shape.__init__(self)
         self.color = (255, 0, 255)
+        self.id = 7
         self.blocks = np.array([
             [0, 1, 1],
             [1, 1, 0],
@@ -125,7 +154,7 @@ class RightZPiece(Shape):
         ])
 
 if __name__ == "__main__":
-    piece = TPiece()
+    piece = LinePiece()
     for row in piece.get_blocks():
         print(row)
     piece.rotate()

@@ -4,7 +4,7 @@ import random
 
 
 class Board:
-    def __init__(self, width, height, genome, net):
+    def __init__(self, width, height, genome=None, net=None):
         self.width = width
         self.height = height
         self.genome = genome
@@ -32,6 +32,8 @@ class Board:
         filled_rows = np.all(self.board, axis=1)
         if np.any(filled_rows):
             self.clear_lines(np.where(filled_rows)[0])
+        # return amount cleared
+        return len(np.where(filled_rows)[0])
 
     def clear_lines(self, lines):
         self.board = np.delete(self.board, lines, axis=0)
@@ -65,12 +67,15 @@ class Board:
 
             if action == "w":
                 self.piece.rotate()
+
             elif action == "a":
-                self.piece.set_y(self.piece.get_y() - 1)
-            # elif action == "s":
-            #     self.piece.set_x(self.piece.get_x() + 1)
+                if not self.piece.check_side(self.board, -1):
+                    self.piece.set_y(self.piece.get_y() - 1)
+            elif action == "s":
+                self.piece.set_x(self.piece.get_x() + 1)
             elif action == "d":
-                self.piece.set_y(self.piece.get_y() + 1)
+                if not self.piece.check_side(self.board, 1):
+                    self.piece.set_y(self.piece.get_y() + 1)
             elif action == " ":
                 while not self.piece.check_collision(self.board):
                     self.piece.set_x(self.piece.get_x() + 1)
