@@ -7,7 +7,7 @@ class Shape:
         self.blocks = np.array([])
         self.color = (255, 255, 255)
         self.x = 0
-        self.y = 4
+        self.y = 3
 
     def rotate(self):
         self.blocks = np.rot90(self.blocks, k=-1)
@@ -35,8 +35,7 @@ class Shape:
         for (x, y), element in np.ndenumerate(self.blocks):
             board_x = self.x + x + 1
             board_y = self.y + y
-            if element:
-                print(board_x, board_y)
+
             if element and (board_x >= 20 or board[board_x, board_y] != 0):
                 return True
         return False
@@ -59,6 +58,7 @@ class TPiece(Shape):
 class SquarePiece(Shape):
     def __init__(self):
         Shape.__init__(self)
+        self.y = 3
         self.color = (255, 255, 0)
         self.blocks = np.array([
             [1, 1],

@@ -4,22 +4,29 @@ import random
 
 
 class Board:
-    def __init__(self, width, height):
+    def __init__(self, width, height, genome, net):
         self.width = width
         self.height = height
+        self.genome = genome
+        self.net = net
         self.board = np.zeros((height, width), dtype=int)
         self.score = 0
         self.lines = 0
         self.level = 1
-        self.piece = None
+        self.piece = TPiece()
         self.game_over = False
+        self.next_piece = random.choice(
+            [TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece]
+        )()
         self.new_piece()
 
     def new_piece(self):
         print("new piece!")
-        self.piece = random.choice(
+        self.piece = self.next_piece
+        self.next_piece = random.choice(
             [TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece]
         )()
+        self.put_active()
 
     def check_clear_lines(self):
         filled_rows = np.all(self.board, axis=1)
@@ -38,36 +45,44 @@ class Board:
         if np.any(self.board[0]):
             self.game_over = True
 
+    def clear_active(self):
+        for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
+            if element:
+                self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 0
+
+    def put_active(self):
+        for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
+            if element:
+                self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 1
+
+    def get_board(self):
+        return self.board
+
     def update(self, action=None):
         if action:
 
-            for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
-                if element:
-                    self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 0
+            self.clear_active()
 
             if action == "w":
                 self.piece.rotate()
             elif action == "a":
                 self.piece.set_y(self.piece.get_y() - 1)
-            elif action == "s":
-                self.piece.set_x(self.piece.get_x() + 1)
+            # elif action == "s":
+            #     self.piece.set_x(self.piece.get_x() + 1)
             elif action == "d":
                 self.piece.set_y(self.piece.get_y() + 1)
             elif action == " ":
-                while not self.piece.check_collision():
-                    self.piece.set_y(self.piece.get_y() + 1)
+                while not self.piece.check_collision(self.board):
+                    self.piece.set_x(self.piece.get_x() + 1)
+                    self.clear_active()
 
             if self.piece.check_collision(self.board):
-                for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
-                    if element:
-                        self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 1
+                self.put_active()
                 self.check_clear_lines()
                 del self.piece
                 self.new_piece()
                 return
             else:
-                for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
-                    if element:
-                        self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 1
+                self.put_active()
         if self.game_over:
             return

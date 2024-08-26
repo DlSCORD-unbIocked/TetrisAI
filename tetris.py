@@ -3,16 +3,14 @@ import time
 from board import Board
 
 
-def main(genomes=None, config=None):
+def main():
     # end will create 50 boards
     board_list = []
-    board = Board(10, 20)
+    board = Board(10, 20, None, None)
+    print("\n".join(["  ".join([str(cell) for cell in row]) for row in board.board]))
     while not board.game_over:
-        key = input("\n> press key WASD to move the piece\n")
-
+        key = input("Enter a key: ")
         board.update(key)
-
-        # from StackOverflow for displaying
         print(
             "\n".join(["  ".join([str(cell) for cell in row]) for row in board.board])
         )
