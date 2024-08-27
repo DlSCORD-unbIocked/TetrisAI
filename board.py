@@ -41,13 +41,28 @@ class Board:
         mask = np.any(self.board, axis=1)
         old = self.piece_level
         self.piece_level = 20 - np.where(mask)[0].min()
-        rigid_diff = self.set_rigid_std()
-        self.score += (old - self.piece_level) * 20 + rigid_diff * 10
+
+        #rigid_diff = self.set_rigid_std()
+        #self.score += (old - self.piece_level) * 20 + rigid_diff * 10
+
         self.score += 5 if not self.piece.check_collision(self.board, 0) else -20
         self.penalize_holes()
-        #self.score -= self.calculate_stack_height() * 20
+        self.score -= self.calculate_stack_height() * 10
         self.score -= self.calculate_stack_unevenness()
         self.score += self.calculate_side_bonus()
+        self.score -= self.penalize_height_differences()
+        self.score += self.reward_flat_surface()
+        self.score += self.reward_low_placement()
+
+    def reward_flat_surface(self):
+        top_blocks = np.argmax(self.board, axis=0)
+        flat_surfaces = np.sum(np.diff(top_blocks) == 0)
+        return flat_surfaces * 100
+
+    def penalize_height_differences(self):
+        column_heights = self.height - np.argmax(self.board, axis=0)
+        height_diffs = np.abs(np.diff(column_heights))
+        return np.sum(height_diffs) * 25
 
     def calculate_side_bonus(self):
         side_columns = self.board[:, [0, 1, -2, -1]]
@@ -116,7 +131,10 @@ class Board:
         return holes
 
     def penalize_holes(self):
-        self.score -= self.calculate_holes() * 15
+        self.score -= self.calculate_holes() * 50
+
+    def reward_low_placement(self):
+        return (self.height - self.piece.get_x()) * 20
 
     def calculate_stack_height(self):
         mask = np.any(self.board, axis=1)

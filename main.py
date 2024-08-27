@@ -75,6 +75,7 @@ if __name__ == "__main__":
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
     #testing with 1
-    winner = p.run(eval_genomes, 100)
+    winner = p.run(eval_genomes, 10)
 
     print("\nBest genome:\n{!s}".format(winner))
+
