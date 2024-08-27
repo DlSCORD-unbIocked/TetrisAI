@@ -12,7 +12,7 @@ class Board:
         self.board = np.zeros((height, width), dtype=int)
         self.piece_level = 0
         self.piece = TPiece()
-        self.score = 0
+        self.score = 3
         self.game_over = False
         self.rigid_std = 0
         self.next_piece = random.choice(
@@ -49,7 +49,7 @@ class Board:
         old = self.piece_level
         self.piece_level = 20 - np.where(mask)[0].min()
         rigid_diff = self.set_rigid_std()
-        self.score += (old - self.piece_level) * 10 + rigid_diff * 10
+        self.score += (old - self.piece_level) * 10 + rigid_diff * 5
         # detect hole
         if self.piece.check_collision(
             self.board,
@@ -78,58 +78,91 @@ class Board:
 
     def put_active(self):
         for (x, y), element in np.ndenumerate(self.piece.get_blocks()):
-            if element:
-                self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 1
+            try:
+                if element:
+                    self.board[self.piece.get_x() + x, self.piece.get_y() + y] = 1
+            except IndexError:
+                self.piece.check_collision(self.board)
 
     def get_board(self):
         return self.board
 
-    def update(self, action=None):
-        if action:
+    # AI GEN
+    def rotate_piece(self):
+        original_position = (self.piece.get_x(), self.piece.get_y())
+        original_rotation = self.piece.rotation
 
-            self.clear_active()
+        # Try to rotate
+        self.piece.rotate()
 
-            if action == "w":
-                # had rotation errors going to other side of screen, so I added this
-                if self.piece.check_side(self.board, -1):
-                    self.piece.set_y(self.piece.get_y() + 2)
-                    self.piece.rotate()
-                    while not self.piece.check_side(self.board, -1):
+        # Check if the rotation is valid
+        if not self.is_valid_position():
+            # If not valid, try wall kicks
+            kick_offsets = [(0, -1), (0, 1), (0, -2), (0, 2), (-1, 0), (1, 0)]
+            for x_offset, y_offset in kick_offsets:
+                self.piece.set_x(original_position[0] + x_offset)
+                self.piece.set_y(original_position[1] + y_offset)
+                if self.is_valid_position():
+                    return True  # Successful rotation with wall kick
+
+            # If all wall kicks fail, revert the rotation
+            self.piece.set_x(original_position[0])
+            self.piece.set_y(original_position[1])
+            self.piece.rotation = original_rotation
+            for _ in range(3):  # Rotate back to original position
+                self.piece.rotate()
+            return False  # Rotation failed
+
+        return True  # Rotation succeeded without wall kick
+
+    def is_valid_position(self):
+        for x, y in self.piece.get_piece_coordinates():
+            if (
+                x < 0
+                or x >= self.height
+                or y < 0
+                or y >= self.width
+                or self.board[x][y]
+            ):
+                return False
+        return True
+
+    def update(self, action):
+        try:
+            if action:
+
+                self.clear_active()
+
+                if action == "w":
+                    self.rotate_piece()
+                elif action == "a":
+                    if not self.piece.check_side(self.board, -1):
                         self.piece.set_y(self.piece.get_y() - 1)
-
-                elif self.piece.check_side(self.board, 1):
-                    self.piece.set_y(self.piece.get_y() - 2)
-                    self.piece.rotate()
-                    while not self.piece.check_side(self.board, 1):
+                elif action == "s":
+                    if not self.piece.check_collision(self.board):
+                        self.piece.set_x(self.piece.get_x() + 1)
+                elif action == "d":
+                    if not self.piece.check_side(self.board, 1):
                         self.piece.set_y(self.piece.get_y() + 1)
+                elif action == " ":
+                    while not self.piece.check_collision(self.board):
+                        self.piece.set_x(self.piece.get_x() + 1)
+                        self.clear_active()
+
+                if self.piece.check_collision(self.board):
+                    self.put_active()
+                    self.check_clear_lines()
+                    self.set_piece_height()
+                    del self.piece
+                    self.new_piece()
 
                 else:
-                    self.piece.rotate()
-            elif action == "a":
-                if not self.piece.check_side(self.board, -1):
-                    self.piece.set_y(self.piece.get_y() - 1)
-            elif action == "s":
-                if not self.piece.check_collision(self.board):
-                    self.piece.set_x(self.piece.get_x() + 1)
-            elif action == "d":
-                if not self.piece.check_side(self.board, 1):
-                    self.piece.set_y(self.piece.get_y() + 1)
-            elif action == " ":
-                while not self.piece.check_collision(self.board):
-                    self.piece.set_x(self.piece.get_x() + 1)
-                    self.clear_active()
-
-            if self.piece.check_collision(self.board):
-                self.put_active()
-                self.check_clear_lines()
-                self.set_piece_height()
-                del self.piece
-                self.new_piece()
-
-            else:
-                self.put_active()
-        # when running AI
-        self.genome.fitness = self.score
-        if self.check_game_over():
+                    self.put_active()
+            # when running AI
+            self.genome.fitness = self.score
+            if self.check_game_over():
+                return False
+            return True
+        except IndexError:
+            print("dooooooh")
             return False
-        return True

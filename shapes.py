@@ -57,6 +57,14 @@ class Shape:
 
         return False
 
+    def get_piece_coordinates(self):
+        coordinates = []
+        for x, row in enumerate(self.blocks):
+            for y, cell in enumerate(row):
+                if cell:
+                    coordinates.append((self.x + x, self.y + y))
+        return coordinates
+
     def check_side(
         self,
         board,

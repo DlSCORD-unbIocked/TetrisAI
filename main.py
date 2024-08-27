@@ -1,9 +1,29 @@
 import neat
+import numpy as np
+
 import graphics
 
 # import tetris
 import os
 from board import Board
+
+
+# AI GEN
+def find_first_rows(arr):
+    if arr.size == 0:
+        return np.array([], dtype=int)
+
+    first_ones = np.argmax(arr == 1, axis=0)
+
+    no_ones = ~np.any(arr == 1, axis=0)
+
+    empty_columns = arr.shape[0] == 0
+
+    invalid_columns = no_ones | empty_columns
+
+    first_ones[invalid_columns] = -1
+
+    return first_ones.tolist()
 
 
 def eval_genomes(genomes, config):
@@ -26,12 +46,13 @@ def eval_genomes(genomes, config):
                     board.rigid_std,
                     board.piece_level,
                 ]
-                + board.get_board().flatten().tolist(),
+                + board.get_board().flatten().tolist()
             )
             key = ["w", " ", "a", "d"][output.index(max(output))]
-            print(key)
-
-            if not board.update("s") and not board.update(key):
+            if not (board.update("s")):
+                board_list.remove(board)
+                continue
+            if not (board.update(key)):
                 board_list.remove(board)
         if len(board_list) == 0:
             break
@@ -52,6 +73,6 @@ if __name__ == "__main__":
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    winner = p.run(eval_genomes, 30)
+    winner = p.run(eval_genomes, 10)
 
     print("\nBest genome:\n{!s}".format(winner))
