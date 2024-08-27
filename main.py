@@ -6,6 +6,7 @@ import graphics
 # import tetris
 import os
 from board import Board
+import concurrent.futures
 
 
 # AI GEN
@@ -73,6 +74,8 @@ if __name__ == "__main__":
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
+    #testing with 1
     winner = p.run(eval_genomes, 10)
 
     print("\nBest genome:\n{!s}".format(winner))
+
