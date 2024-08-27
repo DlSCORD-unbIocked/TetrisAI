@@ -1,35 +1,18 @@
 import neat
-import numpy as np
 
 import graphics
 
 # import tetris
 import os
 from board import Board
-import concurrent.futures
-
+import time
 
 # AI GEN
-def find_first_rows(arr):
-    if arr.size == 0:
-        return np.array([], dtype=int)
-
-    first_ones = np.argmax(arr == 1, axis=0)
-
-    no_ones = ~np.any(arr == 1, axis=0)
-
-    empty_columns = arr.shape[0] == 0
-
-    invalid_columns = no_ones | empty_columns
-
-    first_ones[invalid_columns] = -1
-
-    return first_ones.tolist()
 
 
 def eval_genomes(genomes, config):
     board_list = []
-
+    totals = {"w": 0, " ": 0, "a": 0, "d": 0}
     for genome_id, genome in genomes:
         genome.fitness = 0
         net = neat.nn.FeedForwardNetwork.create(genome, config)
@@ -37,19 +20,19 @@ def eval_genomes(genomes, config):
     render = graphics.Graphics()
     while len(board_list) > 0:
         for board in board_list:
+            board.clear_active()
 
             output = board.net.activate(
                 [
-                    board.piece.x,
-                    board.piece.y,
-                    board.piece.id,
-                    board.piece.rotation,
-                    board.rigid_std,
-                    board.piece_level,
+                    board.calculate_stack_height(),
+                    board.completed_lines,
+                    board.find_first_rows(),
+                    board.calculate_holes(),
                 ]
-                + board.get_board().flatten().tolist()
             )
+            board.put_active()
             key = ["w", " ", "a", "d"][output.index(max(output))]
+            totals[key] += 1
             if not (board.update("s")):
                 board_list.remove(board)
                 continue
@@ -58,6 +41,31 @@ def eval_genomes(genomes, config):
         if len(board_list) == 0:
             break
         render.draw_board(board_list[0])
+    print(totals)
+
+
+def play_best_genome(best_genome, config):
+    net = neat.nn.FeedForwardNetwork.create(best_genome, config)
+    board = Board(10, 20, best_genome, net)
+    render = graphics.Graphics()
+    while not board.game_over:
+        board.clear_active()
+        output = board.net.activate(
+            [
+                board.calculate_stack_height(),
+                board.completed_lines,
+                board.find_first_rows(),
+                board.calculate_holes(),
+            ]
+        )
+        board.put_active()
+        key = ["w", " ", "a", "d"][output.index(max(output))]
+        if not (board.update("s")):
+            break
+        if not (board.update(key)):
+            break
+        render.draw_board(board)
+        time.sleep(0.05)
 
 
 if __name__ == "__main__":
@@ -74,8 +82,9 @@ if __name__ == "__main__":
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    #testing with 1
-    winner = p.run(eval_genomes, 10)
+    # testing with 1
+    winner = p.run(eval_genomes, 40)
 
     print("\nBest genome:\n{!s}".format(winner))
 
+    play_best_genome(winner, cfg)

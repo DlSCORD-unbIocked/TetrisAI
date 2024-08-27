@@ -12,14 +12,20 @@ class Board:
         self.board = np.zeros((height, width), dtype=int)
         self.piece_level = 0
         self.score = 3
+        self.total_height = 0
         self.game_over = False
         self.rigid_std = 0
-        self.next_piece = random.choice([TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece])()
+        self.completed_lines = 0
+        self.next_piece = random.choice(
+            [TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece]
+        )()
         self.new_piece()
 
     def new_piece(self):
         self.piece = self.next_piece
-        self.next_piece = random.choice([TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece])()
+        self.next_piece = random.choice(
+            [TPiece, SquarePiece, LinePiece, LeftLPiece, RightLPiece, LeftZPiece]
+        )()
         self.put_active()
 
     def check_clear_lines(self):
@@ -32,6 +38,7 @@ class Board:
         self.board = np.delete(self.board, lines, axis=0)
         for _ in lines:
             self.board = np.insert(self.board, 0, 0, axis=0)
+            self.completed_lines += 1
         self.score += [800, 2400, 4800, 10000][len(lines) - 1]
 
     def get_score(self):
@@ -42,17 +49,19 @@ class Board:
         old = self.piece_level
         self.piece_level = 20 - np.where(mask)[0].min()
 
-        #rigid_diff = self.set_rigid_std()
-        #self.score += (old - self.piece_level) * 20 + rigid_diff * 10
+        self.score += self.completed_lines * 4
+        self.score += 100 if not self.piece.check_collision(self.board, 0) else 0
 
-        self.score += 5 if not self.piece.check_collision(self.board, 0) else -20
-        self.penalize_holes()
-        self.score -= self.calculate_stack_height() * 10
-        self.score -= self.calculate_stack_unevenness()
-        self.score += self.calculate_side_bonus()
-        self.score -= self.penalize_height_differences()
-        self.score += self.reward_flat_surface()
-        self.score += self.reward_low_placement()
+        # rigid_diff = self.set_rigid_std()
+        # self.score += (old - self.piece_level) * 20 + rigid_diff * 10
+
+        # self.penalize_holes()
+        # self.score -= self.calculate_stack_height() * 10
+        # self.score -= self.calculate_stack_unevenness()
+        # self.score += self.calculate_side_bonus()
+        # self.score -= self.penalize_height_differences()
+        # self.score += self.reward_flat_surface()
+        # self.score += self.reward_low_placement()
 
     def reward_flat_surface(self):
         top_blocks = np.argmax(self.board, axis=0)
@@ -69,7 +78,8 @@ class Board:
         return np.sum(side_columns) * 5
 
     def calculate_stack_unevenness(self):
-        column_heights = self.height - np.where(self.board.any(axis=0))[0]
+        column_heights = np.where(self.board.any(axis=0))[0]
+        # print(column_heights)
         return np.std(column_heights) * 30
 
     def set_rigid_std(self):
@@ -101,7 +111,14 @@ class Board:
         original_rotation = self.piece.rotation
         self.piece.rotate()
         if not self.is_valid_position():
-            for x_offset, y_offset in [(0, -1), (0, 1), (0, -2), (0, 2), (-1, 0), (1, 0)]:
+            for x_offset, y_offset in [
+                (0, -1),
+                (0, 1),
+                (0, -2),
+                (0, 2),
+                (-1, 0),
+                (1, 0),
+            ]:
                 self.piece.set_x(original_position[0] + x_offset)
                 self.piece.set_y(original_position[1] + y_offset)
                 if self.is_valid_position():
@@ -116,7 +133,13 @@ class Board:
 
     def is_valid_position(self):
         for x, y in self.piece.get_piece_coordinates():
-            if x < 0 or x >= self.height or y < 0 or y >= self.width or self.board[x][y]:
+            if (
+                x < 0
+                or x >= self.height
+                or y < 0
+                or y >= self.width
+                or self.board[x][y]
+            ):
                 return False
         return True
 
@@ -137,33 +160,76 @@ class Board:
         return (self.height - self.piece.get_x()) * 20
 
     def calculate_stack_height(self):
+
         mask = np.any(self.board, axis=1)
+
         return self.height - np.where(mask)[0].min() if np.any(mask) else 0
 
+    def find_first_rows(self):
+        arr = self.board
+
+        if arr.size == 0:
+            return np.array([], dtype=int)
+
+        first_ones = np.argmax(arr == 1, axis=0)
+
+        no_ones = ~np.any(arr == 1, axis=0)
+
+        empty_columns = arr.shape[0] == 0
+
+        invalid_columns = no_ones | empty_columns
+
+        first_ones[invalid_columns] = 20
+
+        ret = np.sum(np.abs(np.diff(first_ones))).tolist()
+
+        return ret
+
+    def sum_of_columns(self):
+
+        return np.sum(self.board, axis=0).tolist()
+
     def update(self, action):
-        try:
-            if action:
-                self.clear_active()
-                if action == "w":
-                    self.rotate_piece()
-                elif action == "a" and not self.piece.check_side(self.board, -1):
+
+        if action:
+            self.clear_active()
+            if action == "w":
+                self.rotate_piece()
+            elif action == "a":
+                if self.piece.check_side(self.board, -1):
                     self.piece.set_y(self.piece.get_y() - 1)
-                elif action == "s" and not self.piece.check_collision(self.board):
-                    self.piece.set_x(self.piece.get_x() + 1)
-                elif action == "d" and not self.piece.check_side(self.board, 1):
+                # else:
+                #     self.score -= 5
+            elif action == "s" and not self.piece.check_collision(self.board):
+                self.piece.set_x(self.piece.get_x() + 1)
+            elif action == "d":
+                if not self.piece.check_side(self.board, 1):
                     self.piece.set_y(self.piece.get_y() + 1)
-                elif action == " ":
-                    while not self.piece.check_collision(self.board):
-                        self.piece.set_x(self.piece.get_x() + 1)
-                        self.clear_active()
-                if self.piece.check_collision(self.board):
-                    self.put_active()
-                    self.check_clear_lines()
-                    self.set_piece_height()
-                    self.new_piece()
-                else:
-                    self.put_active()
-            self.genome.fitness = self.score
-            return not self.check_game_over()
-        except IndexError:
-            return False
+                # else:
+                #     self.score -= 5
+            elif action == " ":
+                while not self.piece.check_collision(self.board):
+                    self.piece.set_x(self.piece.get_x() + 1)
+                    self.clear_active()
+            if self.piece.check_collision(self.board):
+                self.put_active()
+                self.check_clear_lines()
+                self.set_piece_height()
+                self.new_piece()
+            else:
+                self.put_active()
+        self.genome.fitness = self.score
+
+        return not self.check_game_over()
+
+
+if __name__ == "__main__":
+    board = Board(10, 20)
+    board.update(" ")
+    board.clear_active()
+    t = board.find_first_rows()
+    print(board.board)
+    board.set_piece_height()
+    print(board.height)
+    board.put_active()
+    print(t)
