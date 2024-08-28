@@ -1,54 +1,85 @@
-import gym
+import gymnasium as gym
 import numpy as np
+import pandas as pd
 
-env = gym.make("MountainCar-v0")
+env = gym.make("MountainCar-v0", render_mode="human")
 
-state_space = (env.observation_space.high - env.observation_space.low) * np.array([10, 100])
-state_space = np.round(state_space, 0).astype(int) + 1
-q_table = np.random.uniform(low=-2, high=0, size=(state_space[0], state_space[1], env.action_space.n))
+num_states = 40
+num_actions = 3
+q_table = np.zeros([num_states, num_states, num_actions])
 
 learning_rate = 0.1
 discount_factor = 0.99
-epsilon = 1.0
-epsilon_decay = 0.995
-min_epsilon = 0.01
-num_episodes = 10000
+epsilon = 0.1
+num_episodes = 1000
 
 
 def discretize_state(state):
-    discrete_state = (state - env.observation_space.low) * np.array([10, 100])
-    return tuple(np.round(discrete_state, 0).astype(int))
+    pos_bins = pd.cut(
+        [env.observation_space.low[0], env.observation_space.high[0]],
+        bins=num_states,
+        retbins=True,
+    )[1][1:-1]
+    vel_bins = pd.cut(
+        [env.observation_space.low[1], env.observation_space.high[1]],
+        bins=num_states,
+        retbins=True,
+    )[1][1:-1]
+
+    pos_disc = np.digitize(state[0], pos_bins)
+    vel_disc = np.digitize(state[1], vel_bins)
+    return pos_disc, vel_disc
 
 
 for episode in range(num_episodes):
-    state = discretize_state(env.reset())
+    state, _ = env.reset()
     done = False
+    total_reward = 0
+    steps = 0
+
     while not done:
+
         if np.random.random() < epsilon:
-            action = np.random.randint(0, env.action_space.n)
+            action = env.action_space.sample()
         else:
-            action = np.argmax(q_table[state])
+            disc_state = discretize_state(state)
+            action = np.argmax(q_table[disc_state])
 
-        next_state, reward, done, _ = env.step(action)
-        next_state = discretize_state(next_state)
+        new_state, reward, done, _, _ = env.step(action)
 
-        if done and next_state[0] >= env.goal_position:
-            q_table[state][action] = reward
-        else:
-            q_table[state][action] = (1 - learning_rate) * q_table[state][action] + \
-                                     learning_rate * (reward + discount_factor * np.max(q_table[next_state]))
+        disc_state = discretize_state(state)
+        disc_new_state = discretize_state(new_state)
 
-        state = next_state
+        best_next_action = np.argmax(q_table[disc_new_state])
+        td_target = (
+                reward + discount_factor * q_table[disc_new_state + (best_next_action,)]
+        )
+        td_error = td_target - q_table[disc_state + (action,)]
+        q_table[disc_state + (action,)] += learning_rate * td_error
 
-    epsilon = max(min_epsilon, epsilon * epsilon_decay)
+        state = new_state
+        total_reward += reward
+        steps += 1
 
-policy = np.argmax(q_table, axis=2)
+    print(
+        f"Episode: {episode + 1}, Steps: {steps}, Total Reward: {total_reward:.2f}, Final Position: {state[0]:.2f}"
+    )
 
-state = discretize_state(env.reset())
+state, _ = env.reset()
 done = False
+total_reward = 0
+steps = 0
+
 while not done:
-    action = policy[state]
-    state, reward, done, _ = env.step(action)
-    env.render()
+    disc_state = discretize_state(state)
+    action = np.argmax(q_table[disc_state])
+    state, reward, done, _, _ = env.step(action)
+    total_reward += reward
+    steps += 1
+
+print("\nFinal Evaluation:")
+print(
+    f"Steps: {steps}, Total Reward: {total_reward:.2f}, Final Position: {state[0]:.2f}"
+)
 
 env.close()

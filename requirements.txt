@@ -2,3 +2,8 @@ neat-python==0.92
 numpy==2.1.0
 pygame==2.6.0
 gym==0.26.2
+gymnasium==1.0.0a2
+swig==4.2.1
+gymnasium[box2d]==0.29.1
+matplotlib==3.9.2
+pandas==2.2.2
