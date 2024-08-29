@@ -24,6 +24,8 @@ def eval_genomes(genomes, config):
 
             output = board.net.activate(
                 [
+                    board.piece.get_x(),
+                    board.piece.get_y(),
                     board.calculate_stack_height(),
                     board.completed_lines,
                     board.find_first_rows(),

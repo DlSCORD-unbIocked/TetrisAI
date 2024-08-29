@@ -218,7 +218,9 @@ class Board:
                 self.new_piece()
             else:
                 self.put_active()
-        self.genome.fitness = self.score
+
+        if self.genome is not None:
+            self.genome.fitness = self.score
 
         return not self.check_game_over()
 
