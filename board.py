@@ -196,7 +196,7 @@ class Board:
             if action == "w":
                 self.rotate_piece()
             elif action == "a":
-                if self.piece.check_side(self.board, -1):
+                if not self.piece.check_side(self.board, -1):
                     self.piece.set_y(self.piece.get_y() - 1)
                 # else:
                 #     self.score -= 5

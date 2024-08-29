@@ -3,7 +3,6 @@ from stable_baselines3.common.vec_env import VecFrameStack
 from stable_baselines3 import A2C
 
 
-
 vec_env = make_atari_env("ALE/Tetris-v5", n_envs=4, seed=0)
 
 
